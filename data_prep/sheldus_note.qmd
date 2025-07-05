@@ -1,0 +1,235 @@
+---
+title: "Climate-Related Hazards Damage SHELDUS data"
+format: html
+editor: visual
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Data Source:
+
+SPATIAL HAZARD EVENTS AND LOSSES DATABASE FOR THE UNITED STATES (SHELDUS) Version 23.0
+
+https://sheldus.asu.edu/
+
+Downloaded: July 3, 2025
+
+## Key Variables:
+
+-   cropdmg: Direct damage to crops in nominal U.S. dollars.
+
+-   cropdmg_adj: Direct damage to crops in adjusted 2023 U.S. dollars.
+
+-   CropDmgPerCapita: Crop damage per capita, adjusted to the most recent SHELDUS inflation base year.
+
+-   propertydmg: Direct damage to property in nominal U.S. dollars (no decimals).
+
+-   propertydmg_adj: Direct damage to property in adjusted 2023 U.S. dollars (two decimal places).
+
+-   PropertyDmgPerCapita: Property damage per capita, adjusted to the most recent SHELDUS inflation base year.
+
+-   duration_days: Duration of the event in days (integer).
+
+## Hazard Categories (18 total):
+
+1.  Avalanche
+2.  Coastal
+3.  Drought
+4.  Earthquake
+5.  Flood
+6.  Fog
+7.  Hail
+8.  Heat
+9.  Hurricane/Tropical Storm
+10. Landslide
+11. Lightning
+12. Severe Thunderstorm
+13. Tornado
+14. Tsunami/Seiche
+15. Volcano
+16. Wildfire
+17. Wind
+18. Winter Weather Load Libraries and Data
+
+```{r}
+library(tidyverse)
+library(here)
+library(gt)
+library(scales)
+
+# Load and clean SHELDUS data
+sheldus <- read_csv(here("data", "direct_loss_aggregated_output_5008.csv"))
+names(sheldus) <- tolower(names(sheldus))
+
+sheldus_clean <- sheldus %>%
+  rename(
+    state = statename,
+    cropdmg_adj = `cropdmg(adj 2023)`,
+    propertydmg_adj = `propertydmg(adj 2023)`
+  ) %>%
+  select(state, year, hazard, cropdmg = cropdmg_adj, propertydmg = propertydmg_adj)
+```
+
+## Summary Statistics
+
+### Annual Damage Summary
+
+```{r}
+summary_by_year <- sheldus_clean %>%
+  group_by(year) %>%
+  summarize(
+    total_property_dmg = sum(propertydmg, na.rm = TRUE),
+    total_crop_dmg = sum(cropdmg, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+summary_by_year |>
+  mutate(
+    total_property_dmg = total_property_dmg / 1e6,
+    total_crop_dmg = total_crop_dmg / 1e6
+  ) |>
+  gt() |>
+  tab_header(title = "Annual Direct Damage Summary (Adjusted to 2023 Dollars)") |>
+  fmt_currency(columns = starts_with("total"), currency = "USD") |>
+  cols_label(
+    total_property_dmg = "Total Property Damage (million)",
+    total_crop_dmg = "Total Crop Damage (million)"
+  )
+```
+
+### Damage by State
+
+```{r}
+summary_by_state <- sheldus_clean %>%
+  group_by(state) %>%
+  summarize(
+    total_property_dmg = sum(propertydmg, na.rm = TRUE),
+    total_crop_dmg = sum(cropdmg, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(total_property_dmg))
+
+summary_by_state |>
+  mutate(
+    total_property_dmg = total_property_dmg / 1e6,
+    total_crop_dmg = total_crop_dmg / 1e6
+  ) |>
+  gt() |>
+  tab_header(title = "Total Damage by State (Adjusted to 2023 Dollars)") |>
+  fmt_currency(columns = starts_with("total"), currency = "USD") |>
+  cols_label(
+    total_property_dmg = "Total Property Damage (million)",
+    total_crop_dmg = "Total Crop Damage (million)"
+  )
+```
+
+### Damage by Hazard Type
+
+```{r}
+summary_by_hazard <- sheldus_clean %>%
+  group_by(hazard) %>%
+  summarize(
+    total_property_dmg = sum(propertydmg, na.rm = TRUE),
+    total_crop_dmg = sum(cropdmg, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(total_property_dmg))
+
+summary_by_hazard |>
+  mutate(
+    total_property_dmg = total_property_dmg / 1e6,
+    total_crop_dmg = total_crop_dmg / 1e6
+  ) |>
+  gt() |>
+  tab_header(title = "Total Damage by Hazard Type (Adjusted to 2023 Dollars)") |>
+  fmt_currency(columns = starts_with("total"), currency = "USD") |>
+  cols_label(
+    total_property_dmg = "Total Property Damage (million)",
+    total_crop_dmg = "Total Crop Damage (million)"
+  )
+```
+
+## Climate-Related Hazard Focus
+
+Damage Trends: Most Climate-Related Hazards, including "Drought", "Flood", "Heat", "Hurricane/Tropical Storm", "Wildfire", "Coastal"
+
+```{r}
+most_climate_related_hazards <- c(
+  "Drought",
+  "Flood",
+  "Heat",
+  "Hurricane/Tropical Storm",
+  "Wildfire",
+  "Coastal"
+)
+
+plot_top_hazards <- sheldus_clean %>%
+  filter(hazard %in% most_climate_related_hazards) %>%
+  mutate(total_dmg = propertydmg + cropdmg) %>%
+  mutate(total_dmg = total_dmg / 1e6) %>%
+  group_by(year, hazard) %>%
+  summarize(total_dmg = sum(total_dmg, na.rm = TRUE), .groups = "drop") %>%
+  ggplot(aes(x = year, y = total_dmg)) +
+  geom_line(color = "steelblue") +
+  facet_wrap(~ hazard, scales = "free_y") +
+  scale_y_continuous(labels = label_dollar()) +
+  labs(
+    title = "Most Climate-Related Hazards: Annual Damage Trends",
+    subtitle = "Total direct damage (property + crop), adjusted to 2023 dollars",
+    x = "Year",
+    y = "Total Damage (2023 USD, in million)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    plot.title = element_text(face = "bold")
+  )
+
+plot_top_hazards
+```
+
+## Data ready for merge
+
+```{r}
+sheldus_formerge <- sheldus |>
+  select(
+    statename,
+    year,
+    hazard,
+    cropdmg,
+    "cropdmg(adj 2023)",
+    cropdmgpercapita,
+    propertydmg,
+    "propertydmg(adj 2023)",
+    propertydmgpercapita,
+    duration_days
+  ) |>
+  rename(
+    cropdmg_adj = "cropdmg(adj 2023)",
+    propertydmg_adj = "propertydmg(adj 2023)",
+    state = statename
+  )
+
+
+summary(sheldus_formerge)
+```
+
+## Descriptive Statistics
+
+```{r}
+library(psych)
+
+describe(sheldus_formerge |> select(-state, -year, -hazard))
+
+saveRDS(sheldus_formerge, here::here("data", "sheldus.RData"))
+write.csv(sheldus_formerge, here::here("data", "sheldus.csv"))
+
+
+library(haven)
+write_dta(sheldus_formerge, here::here("data", "sheldus.dta"))
+
+```
+
+sheldus.RData for R sheldus.csv for Excel sheldus.dta for Stata
