@@ -7,3 +7,12 @@
 .xlsx
 .xlsm
 .xls
+*.pdf
+
+*.xlsx
+
+data/ncsl/
+
+data/sheldus/
+
+*.xlsm
