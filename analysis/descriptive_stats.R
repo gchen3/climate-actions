@@ -75,46 +75,52 @@ summary_stats_long <- summary_stats %>%
   arrange(variable)
 
 
-variable_labels <- c(
-  climate_related_damage_k = "Climate-Related Damage (thousands)",
-  climate_related_damage_percapita = "Climate-Related Damage Per Capita",
-  total_damage_adj_k = "Total Damage Adjusted (thousands)",
-  total_damage_percapita = "Total Damage Per Capita",
-  RDF_pct_of_GF_spending = "RDF as % of GF Spending",
-  debt_total_ratio = "Debt to Total Revenue Ratio",
-  own_rev_ratio = "Own-Source Revenue Ratio",
-  surplus_ratio = "Surplus Ratio",
-  total_debt_outstanding_m = "Total Debt Outstanding (millions)",
-  total_debt_per_capita = "Total Debt Per Capita (thousands)",
-  total_expenditure_m = "Total Expenditure (millions)",
-  total_expenditure_per_capita = "Total Expenditure Per Capita (thousands)",
-  total_revenue_m = "Total Revenue (millions)",
-  total_revenue_per_capita = "Total Revenue Per Capita (thousands)",
-  house_dem = "House Democrats (Count)",
-  house_dem_pct = "House Democrats (%)",
-  house_rep = "House Republicans (Count)",
-  house_total = "House Total Members",
-  senate_dem = "Senate Democrats (Count)",
-  senate_dem_pct = "Senate Democrats (%)",
-  senate_rep = "Senate Republicans (Count)",
-  senate_total = "Senate Total Members",
-  population_k = "Population (thousands)")
+variable_meta <- tibble::tibble(
+  variable = c(
+    # Disaster damage
+    "total_damage_adj_k", "climate_related_damage_k",
+    "total_damage_percapita", "climate_related_damage_percapita",
+    
+    # Fiscal
+    "population_k", "total_revenue_m", "total_expenditure_m",
+    "total_debt_outstanding_m", "total_revenue_per_capita",
+    "total_expenditure_per_capita", "total_debt_per_capita",
+    "own_rev_ratio", "debt_total_ratio", "surplus_ratio",
+    "RDF_pct_of_GF_spending",
+    
+    # Political
+    "senate_total", "senate_dem", "senate_rep", "senate_dem_pct",
+    "house_total", "house_dem", "house_rep", "house_dem_pct"
+  ),
+  label = c(
+    "Total Damage Adjusted (thousands)", "Climate-Related Damage (thousands)",
+    "Total Damage Per Capita", "Climate-Related Damage Per Capita",
+    "Population (thousands)", "Total Revenue (millions)", "Total Expenditure (millions)",
+    "Total Debt Outstanding (millions)", "Total Revenue Per Capita",
+    "Total Expenditure Per Capita", "Total Debt Per Capita", "Own-Source Revenue Ratio",
+    "Debt to Total Revenue Ratio", "Surplus Ratio", "RDF as % of GF Spending",
+    "Senate Total Members", "Senate Democrats (Count)", "Senate Republicans (Count)",
+    "Senate Democrats (%)", "House Total Members", "House Democrats (Count)",
+    "House Republicans (Count)", "House Democrats (%)"
+  ),
+  category = c(
+    rep("Disaster Damage Variables", 4),
+    rep("Fiscal Variables", 11),
+    rep("Political Variables", 8)
+  )
+)
 
-summary_stats_long %>%
-  mutate(variable = recode(variable, !!!variable_labels)) %>%
-  
-  gt() %>%
+sum_stats_table <- summary_stats_long %>%
+  left_join(variable_meta, by = "variable") %>%
+  mutate(category = factor(category, levels = c("Disaster Damage Variables", "Fiscal Variables", "Political Variables"))) %>%
+  arrange(category, variable) %>%
+  select(category, label, mean, median, sd, min, max, n) %>%
+  gt(groupname_col = "category") %>%
   tab_header(title = "Descriptive Statistics of Merged Data") %>%
-  fmt_number(
-    columns = c(mean, median, sd, min, max),
-    decimals = 2
-  ) %>%
-  fmt_number(
-    columns = n,
-    decimals = 0
-  ) %>%
+  fmt_number(columns = c(mean, median, sd, min, max), decimals = 2) %>%
+  fmt_number(columns = n, decimals = 0) %>%
   cols_label(
-    variable = "Variable",
+    label = "Variable",
     mean = "Mean",
     median = "Median",
     sd = "Std. Dev.",
@@ -128,5 +134,9 @@ summary_stats_long %>%
     table.width = pct(100)
   )
 
-summary_stats_long 
+gtsave(
+  data = sum_stats_table,
+  filename = here::here("results", "descriptive_stats_table.png")
+)
+
 
