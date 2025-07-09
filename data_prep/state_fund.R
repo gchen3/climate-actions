@@ -19,7 +19,9 @@ state_fund_clean <- state_fund |>
     cols = -c(State),
     names_to = "year",
     values_to = "RDF_pct_of_GF_spending"
-  ) 
+  ) |>
+  rename(state = State) |>
+  mutate(year = as.integer(year))
 
 
 # load and clean state fund exp data --------------------------------------
@@ -69,7 +71,7 @@ state_fund_exp <- read_excel(
 # plot the data -----------------------------------------------------------
 
 library(ggplot2)
-state_fund_clean |>
+RDF_year_plot <- state_fund_clean |>
   group_by(year) |>
   mutate(year = as.integer(year)) |>
   summarize(
@@ -95,13 +97,21 @@ state_fund_clean |>
     plot.title = element_text(face = "bold")
   )
 
+# Save the plot
+ggsave(
+  here("results", "RDF_year_plot.png"),
+  plot = RDF_year_plot,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
 
 # RDF as GF spending in 2024 by state plot --------------------------------
 
 state_fund_clean |>
   filter(year == "2024") |>
   mutate(RDF_pct_of_GF_spending = as.numeric(RDF_pct_of_GF_spending)) |>
-  ggplot(aes(x = reorder(State, -RDF_pct_of_GF_spending), y = RDF_pct_of_GF_spending)) +
+  ggplot(aes(x = reorder(state, -RDF_pct_of_GF_spending), y = RDF_pct_of_GF_spending)) +
   geom_bar(stat = "identity", fill = "steelblue", width = 0.7) +
   scale_y_continuous(
     limits = c(0, 1),
@@ -111,7 +121,7 @@ state_fund_clean |>
   labs(
     title = "State Rainy Day Fund Balances in 2024",
     subtitle = "Balances as a % of General Fund Spending",
-    x = "State",
+    x = "state",
     y = "RDF Balance (% of GF Spending)"
   ) +
   theme_minimal(base_size = 13) +
@@ -121,6 +131,14 @@ state_fund_clean |>
                                margin = margin(t = 5))
   )
 
+# Save the bar plot
+ggsave(
+  here("results", "RDF_2024_by_state.png"),
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
 # Save the cleaned data
-saveRDS(state_fund_clean, here("data", "state_fund_clean.rds"))
-write_csv(state_fund_clean, here("data", "state_fund_clean.csv"))
+saveRDS(state_fund_clean, here("data", "state_fund.rds"))
+write_csv(state_fund_clean, here("data", "state_fund.csv"))

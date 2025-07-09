@@ -18,8 +18,8 @@ link_2 <- "https://raw.githubusercontent.com/psthomas/state-partisan-composition
 #download.file(link_2, here("data", "state_partisan_composition_2009_2021.csv"))
 
 # Load and clean state partisan composition data
-state_poli_1 <- read_csv(here("data", "state_partisan_composition_1934_2021.csv"))
-state_poli_2 <- read_csv(here("data", "state_partisan_composition_2009_2021.csv"))
+state_poli_1 <- read_csv(here("data", "ncsl", "state_partisan_composition_1934_2021.csv"))
+state_poli_2 <- read_csv(here("data", "ncsl", "state_partisan_composition_2009_2021.csv"))
 
 state_poli_compare <- state_poli_1 |>
   filter(year >= 2009) |>
@@ -34,7 +34,6 @@ state_poli_compare <- state_poli_1 |>
   glimpse()
 
 state_poli_formerge <- state_poli_1 |>
-  filter(year >= 2000) |>
   mutate(senate_dem_pct = senate_dem / senate_total,
          house_dem_pct = house_dem / house_total)
 
@@ -84,8 +83,8 @@ state_poli_compare_2 <- state_poli_1 |>
   glimpse()
 
 state_poli_formerge_2 <- state_poli_formerge |>
-  select(-house_other, -senate_other)
-  bind_rows(state_poli_update |> select (-house_other, -senate_other))
+  select(-house_other, -senate_other) |>
+  bind_rows(state_poli_update |> select(-house_other, -senate_other))
 
 # Save data
 saveRDS(state_poli_formerge_2, here("data", "state_poli.rds"))

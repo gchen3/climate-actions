@@ -223,7 +223,7 @@ library(psych)
 
 describe(sheldus_formerge |> select(-state, -year, -hazard))
 
-saveRDS(sheldus_formerge, here::here("data", "sheldus.RData"))
+saveRDS(sheldus_formerge, here::here("data", "sheldus.rds"))
 write.csv(sheldus_formerge, here::here("data", "sheldus.csv"))
 
 

@@ -3,26 +3,69 @@ library(tidyverse)
 library(here)
 library(gt)
 library(scales)
+library(janitor)
 
 # Load and clean SHELDUS data
-sheldus <- read_csv(here("data", "direct_loss_aggregated_output_5008.csv"))
-names(sheldus) <- tolower(names(sheldus))
+sheldus <- read_csv(here("data", "sheldus", "direct_loss_aggregated_output_5008.csv"))
 
 # Select and rename variables of interest
 sheldus_clean <- sheldus %>%
+  rename_with(tolower) %>%
+  clean_names() %>%
   rename(
     state = statename,
-    cropdmg_adj = `cropdmg(adj 2023)`,
-    propertydmg_adj = `propertydmg(adj 2023)`
+    cropdmg_adj = cropdmg_adj_2023,
+    propertydmg_adj = propertydmg_adj_2023
   ) %>%
-  select(state, year, hazard, cropdmg = cropdmg_adj, propertydmg = propertydmg_adj)
+  select(state, year, hazard, cropdmg, cropdmg_adj, propertydmg, propertydmg_adj,
+         duration_days, cropdmgpercapita, propertydmgpercapita)
 
+saveRDS(sheldus_clean, here::here("data", "sheldus_long.rds"))
+write.csv(sheldus_clean, here::here("data", "sheldus_long.csv"))
+
+# Convert long disaster damage to wide by type of hazard
+sheldus_wide <- sheldus_clean %>%
+  select(-duration_days) %>%
+  pivot_wider(
+    names_from = hazard,
+    values_from = c(cropdmg, cropdmg_adj, cropdmgpercapita, propertydmg, propertydmg_adj, propertydmgpercapita),
+    values_fill = 0
+  ) %>%
+  clean_names() %>%
+  mutate(
+    total_damage_adj = rowSums(select(., starts_with("propertydmg_adj_")), na.rm = TRUE) +
+      rowSums(select(., starts_with("cropdmg_adj_")), na.rm = TRUE),
+    total_damage_percapita = rowSums(select(., starts_with("propertydmgpercapita_")), na.rm = TRUE) +
+      rowSums(select(., starts_with("cropdmgpercapita_")), na.rm = TRUE),
+    total_damage = rowSums(select(., starts_with("propertydmg_")), na.rm = TRUE) +
+      rowSums(select(., starts_with("cropdmg_")), na.rm = TRUE),
+    climate_related_damage = rowSums(select(., # Drought",Flood","Heat","Hurricane/Tropical Storm","Wildfire","Coastal"
+      starts_with("cropdmg_adj_drought"), 
+      starts_with("cropdmg_adj_flood"), 
+      starts_with("cropdmg_adj_heat"), 
+      starts_with("cropdmg_adj_hurricane_tropical_storm"), 
+      starts_with("cropdmg_adj_wildfire"), 
+      starts_with("cropdmg_adj_coastal")), na.rm = TRUE
+    ),
+    climate_related_damage_percapita = rowSums(select(., 
+      starts_with("cropdmgpercapita_drought"), 
+      starts_with("cropdmgpercapita_flood"), 
+      starts_with("cropdmgpercapita_heat"), 
+      starts_with("cropdmgpercapita_hurricane_tropical_storm"), 
+      starts_with("cropdmgpercapita_wildfire"), 
+      starts_with("cropdmgpercapita_coastal")), na.rm = TRUE
+    )
+  )
+
+saveRDS(sheldus_wide, here::here("data", "sheldus.rds"))
+write.csv(sheldus_wide, here::here("data", "sheldus.csv"))
+  
 # Summarize by year
 summary_by_year <- sheldus_clean %>%
   group_by(year) %>%
   summarize(
-    total_property_dmg = sum(propertydmg, na.rm = TRUE),
-    total_crop_dmg = sum(cropdmg, na.rm = TRUE),
+    total_property_dmg = sum(propertydmg_adj, na.rm = TRUE),
+    total_crop_dmg = sum(cropdmg_adj, na.rm = TRUE),
     .groups = "drop"
   )
 
@@ -30,7 +73,7 @@ summary_by_year <- sheldus_clean %>%
 summary_by_state <- sheldus_clean %>%
   group_by(state) %>%
   summarize(
-    total_property_dmg = sum(propertydmg, na.rm = TRUE),
+    total_property_dmg = sum(propertydmg_adj, na.rm = TRUE),
     total_crop_dmg = sum(cropdmg, na.rm = TRUE),
     .groups = "drop"
   ) %>%
@@ -40,7 +83,7 @@ summary_by_state <- sheldus_clean %>%
 summary_by_hazard <- sheldus_clean %>%
   group_by(hazard) %>%
   summarize(
-    total_property_dmg = sum(propertydmg, na.rm = TRUE),
+    total_property_dmg = sum(propertydmg_adj, na.rm = TRUE),
     total_crop_dmg = sum(cropdmg, na.rm = TRUE),
     .groups = "drop"
   ) %>%

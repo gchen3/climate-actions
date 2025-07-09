@@ -5,7 +5,7 @@ library(gt)
 library(ggplot2)
 library(scales)
 
-state_fin <- read_csv(here("data", "StateData.csv"))
+state_fin <- read_csv(here("data", "censusGFD", "StateData.csv"))
 
 names(state_fin)
 
@@ -87,6 +87,12 @@ year_rev_exp <- state_fin_3 |>
 
 year_rev_exp
 
+ggsave(
+  filename = here("results", "year_rev_exp.png"),
+  plot = year_rev_exp,
+  width = 10, height = 6, dpi = 300
+)
+
 debt_ratio_plot <- state_fin_3 |>
   group_by(year) |>
   filter(year >= 2000) |>
@@ -114,6 +120,12 @@ debt_ratio_plot <- state_fin_3 |>
 
 debt_ratio_plot
 
+ggsave(
+  filename = here("results", "debt_ratio_plot.png"),
+  plot = debt_ratio_plot,
+  width = 10, height = 6, dpi = 300
+)
+
 surplus_ratio_plot <- state_fin_3 |>
   group_by(year) |>
   filter(year >= 2000) |>
@@ -140,6 +152,12 @@ surplus_ratio_plot <- state_fin_3 |>
   )
 
 surplus_ratio_plot
+
+ggsave(
+  filename = here("results", "surplus_ratio_plot.png"),
+  plot = surplus_ratio_plot,
+  width = 10, height = 6, dpi = 300
+)
 
 parks_rec_revenue_plot <- state_fin_3 |>
   mutate(chg_parks_recreation_per_capita = (chg_parks_recreation * 1000) / population) |>
