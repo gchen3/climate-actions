@@ -60,7 +60,7 @@ library(gt)
 library(scales)
 
 # Load and clean SHELDUS data
-sheldus <- read_csv(here("data", "direct_loss_aggregated_output_5008.csv"))
+sheldus <- read_csv(here("data", "sheldus",  "direct_loss_aggregated_output_5008.csv"))
 names(sheldus) <- tolower(names(sheldus))
 
 sheldus_clean <- sheldus %>%
