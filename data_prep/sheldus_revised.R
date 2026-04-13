@@ -228,7 +228,7 @@ summary_by_state <- sheldus_clean %>%
   group_by(state) %>%
   summarize(
     total_property_dmg = sum(propertydmg_adj, na.rm = TRUE),
-    total_crop_dmg = sum(cropdmg, na.rm = TRUE),
+    total_crop_dmg = sum(cropdmg_adj, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   arrange(desc(total_property_dmg))
@@ -238,7 +238,7 @@ summary_by_hazard <- sheldus_clean %>%
   group_by(hazard) %>%
   summarize(
     total_property_dmg = sum(propertydmg_adj, na.rm = TRUE),
-    total_crop_dmg = sum(cropdmg, na.rm = TRUE),
+    total_crop_dmg = sum(cropdmg_adj, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   arrange(desc(total_property_dmg))
@@ -262,14 +262,14 @@ summary_by_state |>
     total_property_dmg = total_property_dmg / 1e6,  # Convert to millions
     total_crop_dmg = total_crop_dmg / 1e6           # Convert to millions
   ) |>
+  arrange(desc(total_property_dmg)) |>
   gt() |>
   tab_header(title = "Total Damage by State (Adjusted to 2023 Dollars)") |>
   fmt_currency(columns = starts_with("total"), currency = "USD") |>
   cols_label(
     total_property_dmg = "Total Property Damage (million)",
     total_crop_dmg = "Total Crop Damage (million)"
-  ) |>
-  arrange(desc(total_property_dmg))
+  )
 
 summary_by_hazard |>
   mutate(
@@ -286,7 +286,7 @@ summary_by_hazard |>
 
 # Year-hazard damage plot
 plot_hazard_trends <- sheldus_clean %>%
-  mutate(total_dmg = propertydmg + cropdmg) %>%
+  mutate(total_dmg = propertydmg_adj + cropdmg_adj) %>%
   group_by(year, hazard) %>%
   summarize(total_dmg = sum(total_dmg, na.rm = TRUE), .groups = "drop") %>%
   ggplot(aes(x = year, y = total_dmg, color = hazard)) +
@@ -306,11 +306,11 @@ plot_hazard_trends
 climate_related_hazards <- c(
   "Coastal",
   "Drought",
-  "Flood",
+  "Flooding",
   "Hail",
   "Heat",
   "Hurricane/Tropical Storm",
-  "Severe Thunderstorm",
+  "Severe Storm/Thunder Storm",
   "Tornado",
   "Wildfire",
   "Wind",
@@ -319,7 +319,7 @@ climate_related_hazards <- c(
 
 most_climate_related_hazards <- c(
   "Drought",
-  "Flood",
+  "Flooding",
   "Heat",
   "Hurricane/Tropical Storm",
   "Wildfire",
@@ -329,7 +329,7 @@ most_climate_related_hazards <- c(
 # Filter to top hazards and plot with facets
 plot_top_hazards <- sheldus_clean %>%
   filter(hazard %in% most_climate_related_hazards) %>%
-  mutate(total_dmg = propertydmg + cropdmg) %>%
+  mutate(total_dmg = propertydmg_adj + cropdmg_adj) %>%
   mutate(total_dmg = total_dmg / 1e6) %>%
   group_by(year, hazard) %>%
   summarize(total_dmg = sum(total_dmg, na.rm = TRUE), .groups = "drop") %>%
